@@ -10,8 +10,6 @@ import HistoricalDataUpload from './pages/HistoricalDataUpload';
 import AiRiskPrediction from './pages/AiRiskPrediction';
 import PipelineRiskDetails from './pages/PipelineRiskDetails';
 import MaintenanceRecommendations from './pages/MaintenanceRecommendations';
-import RiskMap from './pages/RiskMap';
-import Reports from './pages/Reports';
 import WorkOrders from './pages/WorkOrders';
 import Inspections from './pages/Inspections';
 import MaintenanceHistory from './pages/MaintenanceHistory';
@@ -23,25 +21,20 @@ function DashboardLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
-      {/* Responsive Collapsible Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main Content Area */}
       <div className="lg:pl-64 flex flex-col flex-1 min-w-0 transition-all">
-        {/* Fixed Header */}
         <Header
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           isSidebarOpen={sidebarOpen}
         />
 
-        {/* Page Content Container */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
 
-        {/* Municipal System Bottom Bar */}
-        <footer className="h-10 bg-white border-t border-slate-200 px-6 flex items-center justify-between text-[11px] text-slate-500 no-print">
-          <span>AI-Powered Ageing Pipeline Risk Assessment System • Urban Water Infrastructure</span>
+        <footer className="h-10 bg-white border-t border-slate-200 px-6 flex items-center justify-between text-[11px] text-slate-500">
+          <span>AI Pipeline Risk Assessment System · Municipal Water Infrastructure</span>
           <span className="hidden sm:inline">Municipal Water Infrastructure Surveillance Division</span>
         </footer>
       </div>
@@ -57,7 +50,7 @@ function ProtectedRoute({ children }) {
     return (
       <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center">
         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
-        <p className="text-xs font-semibold text-slate-600">Verifying municipal authorization session...</p>
+        <p className="text-xs font-semibold text-slate-600">Verifying session...</p>
       </div>
     );
   }
@@ -79,94 +72,15 @@ export default function App() {
             <Route path="/login" element={<Login />} />
 
             {/* Protected Application Routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pipeline-data"
-              element={
-                <ProtectedRoute>
-                  <HistoricalDataUpload />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/ai-risk-prediction"
-              element={
-                <ProtectedRoute>
-                  <AiRiskPrediction />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pipeline/:id"
-              element={
-                <ProtectedRoute>
-                  <PipelineRiskDetails />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/recommendations"
-              element={
-                <ProtectedRoute>
-                  <MaintenanceRecommendations />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/work-orders"
-              element={
-                <ProtectedRoute>
-                  <WorkOrders />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/inspections"
-              element={
-                <ProtectedRoute>
-                  <Inspections />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/maintenance-history"
-              element={
-                <ProtectedRoute>
-                  <MaintenanceHistory />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/risk-map"
-              element={
-                <ProtectedRoute>
-                  <RiskMap />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute>
-                  <Reports />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/update-pipeline"
-              element={
-                <ProtectedRoute>
-                  <UpdatePipelineRegistry />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/pipeline-data" element={<ProtectedRoute><HistoricalDataUpload /></ProtectedRoute>} />
+            <Route path="/ai-risk-prediction" element={<ProtectedRoute><AiRiskPrediction /></ProtectedRoute>} />
+            <Route path="/pipeline/:id" element={<ProtectedRoute><PipelineRiskDetails /></ProtectedRoute>} />
+            <Route path="/recommendations" element={<ProtectedRoute><MaintenanceRecommendations /></ProtectedRoute>} />
+            <Route path="/work-orders" element={<ProtectedRoute><WorkOrders /></ProtectedRoute>} />
+            <Route path="/inspections" element={<ProtectedRoute><Inspections /></ProtectedRoute>} />
+            <Route path="/maintenance-history" element={<ProtectedRoute><MaintenanceHistory /></ProtectedRoute>} />
+            <Route path="/update-pipeline" element={<ProtectedRoute><UpdatePipelineRegistry /></ProtectedRoute>} />
 
             {/* Root and Fallback redirects */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

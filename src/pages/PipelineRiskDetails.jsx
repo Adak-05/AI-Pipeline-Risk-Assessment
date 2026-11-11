@@ -11,10 +11,8 @@ import {
   Upload
 } from 'lucide-react';
 import { usePipelines } from '../context/PipelineContext';
-import { useWorkflow } from '../context/WorkflowContext';
 import RiskBadge from '../components/RiskBadge';
 import RiskMeter from '../components/RiskMeter';
-import RecommendationCard from '../components/RecommendationCard';
 import WorkflowProgress from '../components/WorkflowProgress';
 import ProvenanceBadge from '../components/ProvenanceBadge';
 
@@ -22,7 +20,6 @@ export default function PipelineRiskDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { pipelines, getPipelineById, user } = usePipelines();
-  const { recordRiskReview, submitInspection } = useWorkflow();
 
   // If no dataset uploaded, display required empty state
   if (pipelines.length === 0) {
@@ -246,7 +243,7 @@ export default function PipelineRiskDetails() {
           <div className="p-3 rounded-lg bg-blue-50/50 border border-blue-100">
             <span className="text-[11px] text-blue-700 block uppercase font-semibold">Data Provenance</span>
             <span className="text-sm font-bold text-blue-900 mt-0.5 block">
-              {pipeline.Provenance === 'OFFICIAL_SOURCE' ? 'Official GIS Feed' : pipeline.Is_Synthetic ? 'Synthetic Demo' : 'Engineer Submitted'}
+              {pipeline.Provenance === 'OFFICIAL_SOURCE' ? 'Official GIS Feed' : 'Engineer Submitted'}
             </span>
           </div>
 
@@ -316,92 +313,6 @@ export default function PipelineRiskDetails() {
         </div>
       </div>
 
-      {/* ENGINEER RISK REVIEW & WORK ORDER DISPATCH PANEL */}
-      <div className="bg-white border border-blue-200 rounded-xl p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
-          <div>
-            <h3 className="text-base font-bold text-slate-900">
-              Authorized Engineer Risk Review & Governance
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Review AI diagnostic, record municipal decision, and dispatch work orders
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate(`/maintenance-history?pipelineId=${pipeline.Pipeline_ID}`)}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition"
-            >
-              View Asset Audit Log
-            </button>
-            <button
-              onClick={() => navigate(`/inspections?pipelineId=${pipeline.Pipeline_ID}`)}
-              className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg transition"
-            >
-              Log Field Inspection
-            </button>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-slate-800">Municipal Governance Decision:</span>
-            <span className="text-[11px] text-slate-500">Authorized Officer: {user?.name || 'Municipal Engineer'}</span>
-          </div>
-
-          <div className="flex flex-wrap gap-2.5">
-            <button
-              onClick={async () => {
-                await recordRiskReview(pipeline.Pipeline_ID, 'Approved', 'Engineer reviewed AI feature weighting and approved recommended intervention schedule.');
-                navigate('/work-orders');
-              }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow-xs"
-            >
-              Approve AI Assessment & Issue Work Order
-            </button>
-
-            <button
-              onClick={async () => {
-                await recordRiskReview(pipeline.Pipeline_ID, 'Requested Inspection', 'Physical verification required before authorizing capital expenditure.');
-                navigate(`/inspections?pipelineId=${pipeline.Pipeline_ID}`);
-              }}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition shadow-xs"
-            >
-              Request Field Inspection First
-            </button>
-
-            <button
-              onClick={async () => {
-                const reason = window.prompt('Specify engineering rationale for rejecting AI recommendation:');
-                if (reason) {
-                  await recordRiskReview(pipeline.Pipeline_ID, 'Rejected', reason);
-                  alert('Decision recorded in municipal maintenance audit log.');
-                }
-              }}
-              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition"
-            >
-              Reject Assessment With Reason
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* MAINTENANCE RECOMMENDATIONS SECTION */}
-      <div>
-        <h3 className="text-base font-bold text-slate-800 mb-3">
-          Recommended Maintenance Action
-        </h3>
-        <RecommendationCard
-          riskLevel={level}
-          pipeline={pipeline}
-          pipelines={pipelines}
-          user={user}
-          onScheduleInspection={submitInspection}
-          onAction={(act) => {
-            if (act === 'REPORT') navigate('/reports');
-          }}
-        />
-      </div>
     </div>
   );
 }

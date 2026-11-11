@@ -95,7 +95,9 @@ export function formatPipelineForDb(pipeline, userId = null) {
   if (pipeline.Last_Sync_At) {
     payload.last_sync_at = pipeline.Last_Sync_At;
   }
-  if (userId) {
+  // created_by must be a UUID (auth.users.id), not a name string.
+  // Only include if userId is a valid non-empty UUID string.
+  if (userId && typeof userId === 'string' && userId.length > 10) {
     payload.created_by = userId;
   }
 
@@ -178,6 +180,33 @@ export async function persistPipelinesToDb(pipelines, userId = null) {
       .select();
 
     if (insertErr) {
+      // If the error is about the created_by column not existing (pre-migration),
+      // retry the insert without the created_by field so uploads still work.
+      if (
+        insertErr.message &&
+        (insertErr.message.includes('created_by') || insertErr.message.includes('schema cache'))
+      ) {
+        const recordsWithoutCreatedBy = newRecords.map(r => {
+          const copy = { ...r };
+          delete copy.created_by;
+          return copy;
+        });
+        const { data: inserted2, error: insertErr2 } = await supabase
+          .from('pipelines')
+          .insert(recordsWithoutCreatedBy)
+          .select();
+
+        if (insertErr2) {
+          return { success: false, count: 0, error: insertErr2.message };
+        }
+        return {
+          success: true,
+          count: inserted2 ? inserted2.length : recordsWithoutCreatedBy.length,
+          skipped: skippedIds.length,
+          error: null,
+          notice: 'Records saved. Run the database migration to enable full ownership tracking.'
+        };
+      }
       return { success: false, count: 0, error: insertErr.message };
     }
 

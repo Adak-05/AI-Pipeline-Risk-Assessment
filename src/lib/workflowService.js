@@ -22,14 +22,13 @@ export async function fetchWorkOrdersFromDb() {
       id: row.id,
       pipelineId: row.pipeline_id,
       priority: row.priority,
-      status: row.status,
+      status: row.status || 'Pending',
       recommendedAction: row.recommended_action,
       reason: row.reason || '',
       assignedTo: row.assigned_to || '',
       dueDate: row.due_date || '',
       notes: row.notes || '',
       statusReason: row.status_reason || '',
-      verificationResult: row.verification_result || '',
       createdBy: row.created_by,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -48,7 +47,7 @@ export async function createWorkOrderInDb(workOrderData, user) {
       id: workOrderData.id,
       pipeline_id: workOrderData.pipelineId,
       priority: workOrderData.priority,
-      status: workOrderData.status || 'Pending Review',
+      status: workOrderData.status || 'Pending',
       recommended_action: workOrderData.recommendedAction,
       reason: workOrderData.reason || workOrderData.notes || '',
       assigned_to: workOrderData.assignedTo || null,
@@ -68,8 +67,8 @@ export async function createWorkOrderInDb(workOrderData, user) {
       return { success: false, error: error.message };
     }
 
-    // Append to maintenance audit history
-    await logMaintenanceRecord({
+    // Append to maintenance audit history (non-blocking – do not fail WO creation if audit fails)
+    logMaintenanceRecord({
       pipelineId: workOrderData.pipelineId,
       workOrderId: workOrderData.id,
       eventType: 'WORK_ORDER_CREATED',
@@ -78,7 +77,7 @@ export async function createWorkOrderInDb(workOrderData, user) {
       performedBy: user?.name || 'Authorized Engineer',
       userId: user?.id,
       metadata: { priority: workOrderData.priority, assignedTo: workOrderData.assignedTo }
-    });
+    }).catch(() => {});
 
     return { success: true, data };
   } catch (err) {
@@ -98,9 +97,6 @@ export async function updateWorkOrderStatusInDb(workOrderId, newStatus, reasonOr
     if (reasonOrNotes) {
       updatePayload.status_reason = reasonOrNotes;
     }
-    if (newStatus === 'Closed') {
-      updatePayload.completed_at = now;
-    }
 
     const { data, error } = await supabase
       .from('work_orders')
@@ -115,22 +111,17 @@ export async function updateWorkOrderStatusInDb(workOrderId, newStatus, reasonOr
     const updatedRow = data && data[0];
     const pipelineId = updatedRow?.pipeline_id;
 
-    // Log status change audit record
-    let eventType = 'STATUS_CHANGE';
-    if (newStatus === 'Closed') eventType = 'WORK_ORDER_CLOSED';
-    else if (newStatus === 'Verification') eventType = 'VERIFICATION';
-    else if (newStatus === 'Repair in Progress') eventType = 'REPAIR_PROGRESS';
-
-    await logMaintenanceRecord({
+    // Log status change audit record (non-blocking)
+    logMaintenanceRecord({
       pipelineId: pipelineId || 'UNKNOWN',
       workOrderId,
-      eventType,
-      title: `Status Changed to: ${newStatus}`,
-      description: reasonOrNotes ? `Note/Reason: ${reasonOrNotes}` : `Transitioned to ${newStatus}`,
+      eventType: 'STATUS_CHANGE',
+      title: `Work Order Status: ${newStatus}`,
+      description: reasonOrNotes ? `Note: ${reasonOrNotes}` : `Status changed to ${newStatus}`,
       performedBy: user?.name || 'Authorized Engineer',
       userId: user?.id,
       metadata: { newStatus, reason: reasonOrNotes }
-    });
+    }).catch(() => {});
 
     return { success: true, data: updatedRow };
   } catch (err) {

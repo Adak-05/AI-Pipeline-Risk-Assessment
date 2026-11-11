@@ -4,21 +4,19 @@ import {
   LayoutDashboard,
   Database,
   Cpu,
-  MapPin,
   Wrench,
-  FileText,
-  Activity,
   ClipboardList,
   SearchCheck,
   History,
-  Info,
-  PencilLine
+  PencilLine,
+  LogOut,
+  User
 } from 'lucide-react';
 import { usePipelines } from '../context/PipelineContext';
 import { useWorkflow } from '../context/WorkflowContext';
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { stats, isAssessed } = usePipelines();
+  const { stats, isAssessed, user, logout } = usePipelines();
   const { workflowStats } = useWorkflow();
 
   const navItems = [
@@ -35,56 +33,54 @@ export default function Sidebar({ isOpen, onClose }) {
       badge: stats.totalPipelines > 0 ? `${stats.totalPipelines}` : null
     },
     {
-      to: '/update-pipeline',
-      label: 'Update Pipeline Registry',
-      icon: PencilLine,
-      badge: null
-    },
-    {
       to: '/ai-risk-prediction',
       label: 'AI Risk Prediction',
       icon: Cpu,
       badge: stats.totalPipelines > 0 ? (isAssessed ? 'Active' : 'Pending') : null
     },
     {
-      to: '/risk-map',
-      label: 'Risk Map',
-      icon: MapPin,
-      badge: null
-    },
-    {
       to: '/recommendations',
-      label: 'Maintenance Recommendations',
+      label: 'Maintenance Recommendation',
       icon: Wrench,
       badge: stats.highRiskPipelines > 0 ? `${stats.highRiskPipelines} High` : null,
       badgeColor: 'bg-red-100 text-red-700'
     },
     {
+      to: '/inspections',
+      label: 'Field Inspection',
+      icon: SearchCheck,
+      badge: workflowStats?.totalInspections > 0 ? `${workflowStats.totalInspections}` : null
+    },
+    {
       to: '/work-orders',
-      label: 'Work Orders Queue',
+      label: 'Work Orders',
       icon: ClipboardList,
       badge: workflowStats?.openOrders > 0 ? `${workflowStats.openOrders} Open` : null,
       badgeColor: 'bg-blue-100 text-blue-800'
     },
     {
-      to: '/inspections',
-      label: 'Field Inspections',
-      icon: SearchCheck,
-      badge: workflowStats?.totalInspections > 0 ? `${workflowStats.totalInspections}` : null
-    },
-    {
       to: '/maintenance-history',
-      label: 'Maintenance Audit Log',
+      label: 'Maintenance History',
       icon: History,
       badge: null
     },
     {
-      to: '/reports',
-      label: 'Reports',
-      icon: FileText,
+      to: '/update-pipeline',
+      label: 'Update Pipeline Registry',
+      icon: PencilLine,
       badge: null
     }
   ];
+
+  const handleLogout = async () => {
+    if (window.confirm('Sign out of the application?')) {
+      await logout();
+    }
+  };
+
+  const initials = user?.name
+    ? user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+    : 'EN';
 
   return (
     <>
@@ -104,26 +100,26 @@ export default function Sidebar({ isOpen, onClose }) {
         }`}
       >
         {/* Brand Header */}
-        <div className="h-16 flex items-center px-6 border-b border-slate-800 bg-slate-950/40">
+        <div className="h-16 flex items-center px-5 border-b border-slate-800 bg-slate-950/40 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm font-black text-base">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm font-black text-base shrink-0">
               🚰
             </div>
             <div>
-              <span className="font-bold text-white tracking-tight text-sm block">
+              <span className="font-bold text-white tracking-tight text-sm block leading-tight">
                 MUNICIPAL WATER
               </span>
               <span className="text-[10px] tracking-wider text-blue-400 font-semibold uppercase block">
-                Risk Engine Platform
+                Pipeline Risk System
               </span>
             </div>
           </div>
         </div>
 
         {/* Navigation Section */}
-        <div className="flex-1 py-5 px-3 space-y-1 overflow-y-auto">
-          <div className="px-3 pb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-            Main Navigation
+        <div className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+          <div className="px-3 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+            Navigation
           </div>
 
           {navItems.map((item) => {
@@ -136,14 +132,14 @@ export default function Sidebar({ isOpen, onClose }) {
                   if (window.innerWidth < 1024 && onClose) onClose();
                 }}
                 className={({ isActive }) =>
-                  `flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                  `flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-sm'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
                   }`
                 }
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <Icon className="w-4 h-4 shrink-0" />
                   <span className="truncate">{item.label}</span>
                 </div>
@@ -151,7 +147,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 {item.badge && (
                   <span
                     className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
-                      item.badgeColor || 'bg-slate-800 text-slate-300'
+                      item.badgeColor || 'bg-slate-700 text-slate-300'
                     }`}
                   >
                     {item.badge}
@@ -160,34 +156,25 @@ export default function Sidebar({ isOpen, onClose }) {
               </NavLink>
             );
           })}
-
-          {/* Demonstration Architecture Box */}
-          <div className="mt-8 px-3 pt-4 border-t border-slate-800">
-            <div className="rounded-lg bg-slate-800/60 p-3 text-[11px] text-slate-300 space-y-2 border border-slate-700/60">
-              <div className="flex items-center gap-1.5 text-blue-400 font-bold uppercase tracking-wider text-[10px]">
-                <Activity className="w-3.5 h-3.5" />
-                <span>Assessment Pipeline</span>
-              </div>
-              <p className="text-[11px] text-slate-400 leading-snug">
-                Data Upload → Parametric Verification → Feature Weighting → Risk Score (0-100) → Work Orders
-              </p>
-              <div className="text-[10px] text-slate-500 pt-1 border-t border-slate-700/50 flex items-center justify-between">
-                <span>Dataset: {stats.totalPipelines} Mains</span>
-                <span className={stats.totalPipelines > 0 ? 'text-emerald-400 font-semibold' : 'text-slate-400'}>
-                  {stats.totalPipelines === 0 ? 'Empty' : isAssessed ? 'Assessed' : 'Pending'}
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Footer / System Note */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/60 text-[11px] text-slate-400">
-          <div className="flex items-start gap-2">
-            <Info className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
-            <p className="text-[10px] leading-tight text-slate-400">
-              AI-Powered Municipal Water Distribution Asset Surveillance System.
-            </p>
+        {/* User Profile + Logout Footer */}
+        <div className="p-3 border-t border-slate-800 bg-slate-950/60 shrink-0">
+          <div className="flex items-center gap-3 px-2 py-2">
+            <div className="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-xs shrink-0">
+              {initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-white truncate">{user?.name || 'Engineer'}</p>
+              <p className="text-[10px] text-slate-400 truncate">{user?.email || ''}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Sign Out"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition shrink-0"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </aside>

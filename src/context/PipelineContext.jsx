@@ -14,14 +14,14 @@ export function PipelineProvider({ children }) {
   // ── Authentication & Session State ───────────────────────────────────────────
   const [session, setSession] = useState(null);
   const [user, setUser] = useState({
-    name: 'Er. Rajesh Kulkarni',
+    name: '',
     role: 'engineer',
     designation: 'Municipal Engineer',
     department: 'Water Infrastructure & Asset Management',
     division: 'Zone-IV Urban Distribution',
-    avatar: 'RK',
-    email: 'engineer.waterworks@mcgm.gov.in',
-    isDemoUser: true
+    avatar: 'ME',
+    email: '',
+    isDemoUser: false
   });
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
@@ -44,37 +44,43 @@ export function PipelineProvider({ children }) {
         .eq('id', userId)
         .maybeSingle();
 
-      if (profile) {
-        setUser({
-          name: profile.full_name || userEmail.split('@')[0],
-          role: profile.role || 'engineer',
-          designation: profile.designation || 'Municipal Engineer',
-          department: profile.department || 'Water Infrastructure & Asset Management',
-          division: profile.division || 'Zone-IV Urban Distribution',
-          avatar: profile.avatar_initials || (profile.full_name ? profile.full_name.substring(0, 2).toUpperCase() : 'ME'),
-          email: userEmail,
-          isDemoUser: false
-        });
-      } else {
-        const fullName = userMetadata?.full_name || userEmail.split('@')[0];
-        setUser({
-          name: fullName,
-          role: userMetadata?.role || 'engineer',
-          designation: userMetadata?.designation || 'Municipal Engineer',
-          department: 'Water Infrastructure & Asset Management',
-          division: 'Zone-IV Urban Distribution',
-          avatar: fullName.substring(0, 2).toUpperCase(),
-          email: userEmail,
-          isDemoUser: false
-        });
-      }
-    } catch {
-      // Fallback to basic session info
-      setUser(prev => ({
-        ...prev,
+      // Derive a display name: prefer profile full_name, then metadata full_name,
+      // then the part before @ in the email (actual authenticated identity)
+      const derivedName = profile?.full_name
+        || userMetadata?.full_name
+        || userMetadata?.name
+        || userEmail.split('@')[0];
+
+      const initials = derivedName
+        .split(' ')
+        .map(w => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || userEmail.slice(0, 2).toUpperCase();
+
+      setUser({
+        name: derivedName,
+        role: profile?.role || userMetadata?.role || 'engineer',
+        designation: profile?.designation || userMetadata?.designation || 'Municipal Engineer',
+        department: profile?.department || 'Water Infrastructure & Asset Management',
+        division: profile?.division || 'Zone-IV Urban Distribution',
+        avatar: profile?.avatar_initials || initials,
         email: userEmail,
         isDemoUser: false
-      }));
+      });
+    } catch {
+      // Fallback: use the actual email as identity, never a hardcoded name
+      const fallbackName = userEmail.split('@')[0];
+      setUser({
+        name: fallbackName,
+        role: 'engineer',
+        designation: 'Municipal Engineer',
+        department: 'Water Infrastructure & Asset Management',
+        division: 'Zone-IV Urban Distribution',
+        avatar: fallbackName.slice(0, 2).toUpperCase(),
+        email: userEmail,
+        isDemoUser: false
+      });
     }
   }, []);
 
@@ -207,14 +213,16 @@ export function PipelineProvider({ children }) {
           // Fall back gracefully to demo session for evaluation review
           setSession({ isDemo: true });
           localStorage.setItem('pipeline_demo_session', 'active');
+          const demoEmail = email.trim();
+          const demoName = demoEmail.split('@')[0];
           setUser({
-            name: 'Er. Rajesh Kulkarni',
+            name: demoName,
             role: 'engineer',
             designation: 'Municipal Engineer',
             department: 'Water Infrastructure & Asset Management',
             division: 'Zone-IV Urban Distribution',
-            avatar: 'RK',
-            email: 'engineer.waterworks@mcgm.gov.in',
+            avatar: demoName.slice(0, 2).toUpperCase(),
+            email: demoEmail,
             isDemoUser: true
           });
           return {

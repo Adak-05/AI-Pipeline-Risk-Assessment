@@ -74,7 +74,7 @@ export function WorkflowProvider({ children }) {
       pipelineId: orderData.pipelineId,
       location: pipeline?.Location || '—',
       priority: orderData.priority || 'Medium',
-      status: 'Pending Review',
+      status: 'Pending',
       recommendedAction: orderData.recommendedAction,
       reason: orderData.reason || orderData.notes || '',
       assignedTo: orderData.assignedTo || '',
@@ -98,7 +98,7 @@ export function WorkflowProvider({ children }) {
       workOrderId: newOrder.id,
       eventType: 'WORK_ORDER_CREATED',
       title: `Work Order Created: ${newOrder.id}`,
-      description: `Action: ${newOrder.recommendedAction} (Priority: ${newOrder.priority})`,
+      description: `Engineer ${user?.name || 'Authorized Engineer'} created a work order for Pipeline ${orderData.pipelineId}. Necessary Action: ${newOrder.recommendedAction}. Due Date: ${newOrder.dueDate || 'TBD'}. Priority: ${newOrder.priority}.`,
       performedBy: user?.name || 'Authorized Engineer',
       createdAt: new Date().toISOString()
     };
@@ -187,7 +187,55 @@ export function WorkflowProvider({ children }) {
     return { success: true, workOrder: updated };
   };
 
-  // ── Inspection Actions ───────────────────────────────────────────────────────
+  // ── Inspection Scheduling (sets up a future physical inspection) ─────────────
+  const scheduleInspection = async ({ pipelineId, scheduledDate, engineerName }) => {
+    if (!pipelineId || !scheduledDate) {
+      return { success: false, error: 'Pipeline ID and scheduled date are required.' };
+    }
+
+    const newInsp = {
+      id: `INSP-${Date.now()}`,
+      pipelineId,
+      workOrderId: null,
+      inspectionDate: scheduledDate,
+      conditionObserved: null,   // null = not yet inspected (Scheduled state)
+      leakageObserved: false,
+      corrosionObserved: false,
+      notes: `Scheduled for physical inspection on ${scheduledDate}`,
+      recommendedAction: '',
+      inspectorName: engineerName || user?.name || 'Authorized Inspector',
+      photoUrl: null,
+      status: 'Scheduled',
+      createdAt: new Date().toISOString()
+    };
+
+    setInspections(prev => [newInsp, ...prev]);
+
+    // Audit record for Maintenance History
+    const audit = {
+      id: `LOG-${Date.now()}`,
+      pipelineId,
+      workOrderId: null,
+      eventType: 'INSPECTION_SCHEDULED',
+      title: `Inspection Scheduled: ${newInsp.id}`,
+      description: `Engineer ${engineerName || user?.name} scheduled an inspection for Pipeline ${pipelineId} on ${scheduledDate}.`,
+      performedBy: engineerName || user?.name || 'Authorized Inspector',
+      createdAt: new Date().toISOString()
+    };
+    setMaintenanceRecords(prev => [audit, ...prev]);
+
+    // Persist to Supabase
+    if (session && !session.isDemo) {
+      const res = await createInspectionInDb(newInsp, { ...user, name: engineerName || user?.name });
+      if (!res.success) {
+        setWorkflowError(`Could not save scheduled inspection: ${res.error}`);
+      }
+    }
+
+    return { success: true, inspection: newInsp };
+  };
+
+  // ── Field Inspection Submission (records actual physical inspection results) ──
   const submitInspection = async (inspectionData) => {
     if (!inspectionData.pipelineId || !inspectionData.inspectionDate || !inspectionData.conditionObserved) {
       return { success: false, error: 'Pipeline ID, inspection date, and observed condition are required.' };
@@ -203,8 +251,9 @@ export function WorkflowProvider({ children }) {
       corrosionObserved: !!inspectionData.corrosionObserved,
       notes: inspectionData.notes || '',
       recommendedAction: inspectionData.recommendedAction || '',
-      inspectorName: user?.name || 'Authorized Inspector',
+      inspectorName: inspectionData.inspectorName || user?.name || 'Authorized Inspector',
       photoUrl: inspectionData.photoUrl || null,
+      status: 'Completed',
       createdAt: new Date().toISOString()
     };
 
@@ -221,15 +270,15 @@ export function WorkflowProvider({ children }) {
       }
     }
 
-    // Local audit record
+    // Local audit record — FIELD_INSPECTION_COMPLETED event for Maintenance History
     const audit = {
       id: `LOG-${Date.now()}`,
       pipelineId: newInsp.pipelineId,
       workOrderId: newInsp.workOrderId,
-      eventType: 'INSPECTION_SUBMITTED',
-      title: `Field Inspection Logged: ${newInsp.id}`,
-      description: `Condition: ${newInsp.conditionObserved}. Leaks: ${newInsp.leakageObserved ? 'Yes' : 'No'}. Corrosion: ${newInsp.corrosionObserved ? 'Yes' : 'No'}. Notes: ${newInsp.notes || 'None'}`,
-      performedBy: user?.name || 'Inspector',
+      eventType: 'FIELD_INSPECTION_COMPLETED',
+      title: `Field Inspection Completed: ${newInsp.id}`,
+      description: `Engineer ${newInsp.inspectorName} completed the physical inspection of Pipeline ${newInsp.pipelineId}. Recorded Condition: ${newInsp.conditionObserved}. Remarks: ${newInsp.notes || 'None'}`,
+      performedBy: newInsp.inspectorName || user?.name || 'Inspector',
       createdAt: new Date().toISOString()
     };
     setMaintenanceRecords(prev => [audit, ...prev]);
@@ -321,6 +370,7 @@ export function WorkflowProvider({ children }) {
         workflowStats,
         createWorkOrder,
         updateWorkOrderStatus,
+        scheduleInspection,
         submitInspection,
         recordRiskReview,
         loadWorkflowData
