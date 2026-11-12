@@ -193,16 +193,7 @@ export default function Header({ onToggleSidebar, isSidebarOpen }) {
               </div>
 
               <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    setShowProfileMenu(false);
-                    navigate('/reports');
-                  }}
-                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-medium text-left"
-                >
-                  <FileText className="w-4 h-4 text-slate-500" />
-                  <span>Executive Risk Reports</span>
-                </button>
+                
 
                 {pipelines.length > 0 && (
                   <button
